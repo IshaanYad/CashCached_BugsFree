@@ -80,12 +80,20 @@ public class AccountService {
             "INR"
         );
         
+        BigDecimal effectiveInterestRate = request.getInterestRate() != null && request.getInterestRate().compareTo(BigDecimal.ZERO) > 0
+            ? request.getInterestRate()
+            : product.getMinInterestRate();
+        
+        Integer effectiveTenure = request.getTenureMonths() != null && request.getTenureMonths() > 0
+            ? request.getTenureMonths()
+            : product.getMaxTermMonths();
+        
         AccountCreationRequest convertedRequest = AccountCreationRequest.builder()
             .customerId(request.getCustomerId())
             .productCode(request.getProductCode())
             .principalAmount(principalInBaseCurrency)
-            .interestRate(request.getInterestRate())
-            .tenureMonths(request.getTenureMonths())
+            .interestRate(effectiveInterestRate)
+            .tenureMonths(effectiveTenure)
             .branchCode(request.getBranchCode())
             .remarks(request.getRemarks())
             .build();
@@ -117,9 +125,9 @@ public class AccountService {
                 .productType(product.getProductType())
                 .principalAmount(principalTokens)
                 .currency(request.getCurrency() != null ? request.getCurrency() : "USD")
-                .interestRate(request.getInterestRate())
-                .baseInterestRate(request.getInterestRate())
-                .tenureMonths(request.getTenureMonths())
+                .interestRate(effectiveInterestRate)
+                .baseInterestRate(effectiveInterestRate)
+                .tenureMonths(effectiveTenure)
                 .productMaxTenureMonths(product.getMaxTermMonths())
                 .maturityAmount(maturityTokens)
                 .branchCode(request.getBranchCode())
@@ -133,7 +141,6 @@ public class AccountService {
         FdAccount savedAccount = accountRepository.save(pricedAccount);
 
         recordInitialDepositTransaction(savedAccount, principalTokens);
-        recordContractLedgerEntry(request.getCustomerId(), principalTokens, accountNo);
 
         log.info("Created FD account: {} for customer: {}", accountNo, request.getCustomerId());
 
@@ -650,14 +657,6 @@ public class AccountService {
         return response;
     }
 
-    private void recordContractLedgerEntry(String customerId, BigDecimal amount, String accountNo) {
-        try {
-            cashCachedService.recordContractLock(customerId, amount, "FD Contract - " + accountNo);
-        } catch (Exception ex) {
-            log.warn("Failed to record contract ledger entry for account {}: {}", accountNo, ex.getMessage());
-        }
-    }
-
     private BigDecimal resolvePenaltyRate(ProductDto product) {
         return product != null && product.getPrematurePenaltyRate() != null
                 ? product.getPrematurePenaltyRate()
@@ -892,7 +891,6 @@ public class AccountService {
                 savedAccount.getPrematurePenaltyGraceDays());
 
         recordInitialDepositTransaction(savedAccount, principalTokens);
-        recordContractLedgerEntry(request.getCustomerId(), principalTokens, accountNo);
         log.info("Created V1 FD account (product defaults): {} for customer: {}", accountNo, request.getCustomerId());
 
         return mapAccountResponse(savedAccount);
@@ -985,7 +983,6 @@ public class AccountService {
         }
 
         recordInitialDepositTransaction(savedAccount, principalTokens);
-        recordContractLedgerEntry(request.getCustomerId(), principalTokens, accountNo);
 
         log.info("Created V2 FD account (custom values): {} for customer: {} with rate: {}%, tenure: {} months",
                 accountNo, request.getCustomerId(), finalInterestRate, finalTenure);
@@ -1016,17 +1013,10 @@ public class AccountService {
 
     private CashCachedLedgerEntry fundAccountFromWallet(String customerId, BigDecimal principalTokens,
             String accountNo) {
-        try {
-            CashCachedRedeemRequest request = new CashCachedRedeemRequest();
-            request.setCustomerId(customerId);
-            request.setAmount(principalTokens);
-            request.setReference("FD Funding - " + accountNo);
-            return cashCachedService.redeem(request);
-        } catch (InvalidAccountDataException ex) {
-            throw ex;
-        } catch (RuntimeException ex) {
-            log.error("Wallet funding failed for account {}: {}", accountNo, ex.getMessage());
-            throw new ServiceIntegrationException("Unable to fund FD account from wallet", ex);
-        }
+        CashCachedRedeemRequest request = new CashCachedRedeemRequest();
+        request.setCustomerId(customerId);
+        request.setAmount(principalTokens);
+        request.setReference("FD Funding - " + accountNo);
+        return cashCachedService.redeem(request);
     }
 }

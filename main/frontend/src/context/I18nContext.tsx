@@ -910,6 +910,9 @@ const dict: Dict = {
     ja: "© 2024 CashCached。著作権所有。| ブロックチェーン搭載バンキングプラットフォーム",
   },
   "sidebar.wallet.title": { en: "Wallet Balance", ja: "ウォレット残高" },
+  "sidebar.wallet.available": { en: "Available Balance", ja: "利用可能残高" },
+  "sidebar.wallet.addMoney": { en: "Add Money", ja: "入金" },
+  "sidebar.wallet.viewWallet": { en: "View Wallet", ja: "ウォレット表示" },
   "sidebar.wallet.depositWithdraw": {
     en: "Deposit/Withdraw",
     ja: "入金/出金",

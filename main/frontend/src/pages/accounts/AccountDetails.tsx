@@ -611,17 +611,9 @@ export function AccountDetails() {
                   <p className="text-sm font-medium text-muted-foreground">
                     {t("details.principal")}
                   </p>
-                  <div className="flex flex-col">
-                    <p className="text-xl font-semibold">
-                      {formatTokens(account.principalAmount)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatConvertedTokens(
-                        account.principalAmount,
-                        preferredCurrency
-                      )}
-                    </p>
-                  </div>
+                  <p className="text-xl font-semibold">
+                    {formatCurrency(account.principalAmount, preferredCurrency)}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">

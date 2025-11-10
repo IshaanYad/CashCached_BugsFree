@@ -257,7 +257,7 @@ function AppSidebar() {
                   <div className="text-xs text-muted-foreground">
                     {isWalletLoading
                       ? t("sidebar.wallet.loading")
-                      : "Available Balance"}
+                      : t("sidebar.wallet.available")}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -267,7 +267,7 @@ function AppSidebar() {
                     className="flex-1"
                     onClick={() => navigate("/wallet")}
                   >
-                    Add Money
+                    {t("sidebar.wallet.addMoney")}
                   </Button>
                   <Button
                     variant="outline"
@@ -275,7 +275,7 @@ function AppSidebar() {
                     className="flex-1"
                     onClick={() => navigate("/wallet")}
                   >
-                    View Wallet
+                    {t("sidebar.wallet.viewWallet")}
                   </Button>
                 </div>
               </div>
