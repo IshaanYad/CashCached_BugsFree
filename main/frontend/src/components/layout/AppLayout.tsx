@@ -139,11 +139,6 @@ const staffNavigation = [
         url: "/accounts/new",
         icon: UserPlus,
       },
-      {
-        title: "CashCached",
-        url: "/financials/stablecoin",
-        icon: Coins,
-      },
     ],
   },
 ];
@@ -322,8 +317,6 @@ function AppSidebar() {
                           ? t("nav.allAccounts")
                           : item.title === "Open Account"
                           ? t("nav.openAccount")
-                          : item.title === "CashCached"
-                          ? t("nav.stablecoin")
                           : item.title}
                       </span>
                     </SidebarMenuButton>

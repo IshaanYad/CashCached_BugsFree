@@ -26,12 +26,12 @@ public class GatewayConfig {
                 return builder.routes()
                                 .route("customer_auth", r -> r.path("/api/auth/**")
                                                 .uri(customerUrl))
-                                .route("customer_api", r -> r.path("/api/customer/**", "/api/v1/customer/**")
+                                .route("customer_api", r -> r.path("/api/customer/**", "/api/v1/customer/**", "/api/customers/**")
                                                 .uri(customerUrl))
                                 .route("customer_docs", r -> r.path("/docs/customer")
                                                 .filters(f -> f.rewritePath("/docs/customer", "/v3/api-docs"))
                                                 .uri(customerUrl))
-                                .route("product_api", r -> r.path("/api/v1/product/**", "/api/v1/pricing-rule/**")
+                                .route("product_api", r -> r.path("/api/v1/product/**", "/api/v1/pricing-rule/**", "/api/products/**")
                                                 .uri(productUrl))
                                 .route("product_docs", r -> r.path("/docs/product")
                                                 .filters(f -> f.rewritePath("/docs/product", "/v3/api-docs"))
@@ -43,7 +43,7 @@ public class GatewayConfig {
                                                 .uri(fdCalculatorUrl))
                                 .route("accounts_api",
                                                 r -> r.path("/api/accounts/**", "/api/v1/accounts/**",
-                                                                "/api/v2/accounts/**", "/api/financials/**")
+                                                                "/api/v2/accounts/**", "/api/financials/**", "/api/admin/**")
                                                                 .uri(accountsUrl))
                                 .route("accounts_docs", r -> r.path("/docs/accounts")
                                                 .filters(f -> f.rewritePath("/docs/accounts", "/v3/api-docs"))

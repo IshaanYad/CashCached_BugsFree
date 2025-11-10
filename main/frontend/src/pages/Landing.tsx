@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { useState } from "react";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -7,6 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../context/I18nContext";
 import { AuthNavbar } from "../components/layout/AuthNavbar";
@@ -18,11 +28,30 @@ import {
   Zap,
   Shield,
   CreditCard,
+  Calculator,
 } from "lucide-react";
 
 export function Landing() {
   const { isAuthenticated } = useAuth();
   const { t } = useI18n();
+  const [principal, setPrincipal] = useState(50000);
+  const [tenure, setTenure] = useState(2);
+
+  const getRate = (years: number) => {
+    const rates: Record<number, number> = { 1: 6.5, 2: 7.0, 3: 7.5, 5: 8.0, 10: 8.5 };
+    return rates[years] || 7.0;
+  };
+
+  const rate = getRate(tenure);
+
+  const calculateMaturity = () => {
+    const r = rate / 100;
+    const maturity = principal * Math.pow(1 + r, tenure);
+    return maturity;
+  };
+
+  const maturityAmount = calculateMaturity();
+  const interestEarned = maturityAmount - principal;
 
   return (
     <div className="min-h-screen bg-background">
@@ -89,48 +118,66 @@ export function Landing() {
             <div className="relative">
               <div className="absolute inset-0 bg-accent rounded-2xl transform rotate-3 opacity-10" />
               <Card className="relative">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                        <TrendingUp className="w-6 h-6 text-primary-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          {t("landing.hero.currentRate")}
-                        </p>
-                        <p className="text-2xl font-bold text-foreground">
-                          8.5%
-                        </p>
-                      </div>
-                    </div>
-                    <Card className="bg-secondary/20">
-                      <CardContent className="p-4 space-y-3">
-                        <p className="text-xs text-muted-foreground">
-                          {t("landing.hero.investmentOverview")}
-                        </p>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-foreground">
-                            {t("landing.hero.principal")}
-                          </span>
-                          <span className="font-semibold text-foreground">
-                            ₹50,000
-                          </span>
-                        </div>
-                        <div className="h-1 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full w-3/4 bg-primary rounded-full" />
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-foreground">
-                            {t("landing.hero.maturity")}
-                          </span>
-                          <span className="font-semibold text-foreground">
-                            ₹54,250
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calculator className="w-5 h-5" />
+                    FD Calculator
+                  </CardTitle>
+                  <CardDescription>Calculate your returns instantly</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="principal">Principal Amount (₹)</Label>
+                    <Input
+                      id="principal"
+                      type="number"
+                      value={principal}
+                      onChange={(e) => setPrincipal(Number(e.target.value))}
+                      min="1000"
+                      step="1000"
+                    />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tenure">Tenure (Years)</Label>
+                    <Select value={tenure.toString()} onValueChange={(v) => setTenure(Number(v))}>
+                      <SelectTrigger id="tenure">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 Year (6.5%)</SelectItem>
+                        <SelectItem value="2">2 Years (7.0%)</SelectItem>
+                        <SelectItem value="3">3 Years (7.5%)</SelectItem>
+                        <SelectItem value="5">5 Years (8.0%)</SelectItem>
+                        <SelectItem value="10">10 Years (8.5%)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Card className="bg-secondary/20 border-primary/20">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Principal</span>
+                        <span className="font-semibold">₹{principal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Interest Earned</span>
+                        <span className="font-semibold text-green-600">₹{interestEarned.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                      </div>
+                      <div className="h-px bg-border" />
+                      <div className="flex justify-between">
+                        <span className="font-medium">Maturity Amount</span>
+                        <span className="text-xl font-bold text-primary">₹{maturityAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {isAuthenticated ? (
+                    <Link to="/accounts/new">
+                      <Button className="w-full">Open FD Account</Button>
+                    </Link>
+                  ) : (
+                    <Link to="/register">
+                      <Button className="w-full">Get Started</Button>
+                    </Link>
+                  )}
                 </CardContent>
               </Card>
             </div>

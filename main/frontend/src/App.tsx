@@ -22,7 +22,6 @@ import { RedemptionPage } from "./pages/accounts/RedemptionPage";
 import { CreateAccount } from "./pages/accounts/CreateAccount";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminAccountsList } from "./pages/admin/AdminAccountsList";
-import { CashCachedDashboard } from "./pages/financials/CashCachedDashboard";
 import { WalletPage } from "./pages/wallet/WalletPage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -106,10 +105,6 @@ function App() {
                               element={<RedemptionPage />}
                             />
                             <Route path="/wallet" element={<WalletPage />} />
-                            <Route
-                              path="/financials/stablecoin"
-                              element={<CashCachedDashboard />}
-                            />
                             <Route path="/admin" element={<AdminDashboard />} />
                             <Route
                               path="/admin/accounts"
