@@ -625,14 +625,20 @@ public class AccountService {
     }
 
     private BigDecimal computeCurrentBalance(String accountNo) {
+        LocalDateTime now = TimeProvider.currentDateTime();
         List<com.bt.accounts.entity.AccountTransaction> txns = transactionRepository
                 .findByAccountNoOrderByTransactionDateDesc(accountNo);
-        if (txns == null || txns.isEmpty()) {
+        
+        List<com.bt.accounts.entity.AccountTransaction> validTxns = txns.stream()
+                .filter(t -> t.getTransactionDate() != null && !t.getTransactionDate().isAfter(now))
+                .collect(Collectors.toList());
+        
+        if (validTxns.isEmpty()) {
             FdAccount account = accountRepository.findByAccountNo(accountNo).orElseThrow();
             BigDecimal pa = account.getPrincipalAmount();
             return pa != null ? pa : BigDecimal.ZERO;
         }
-        return txns.get(0).getBalanceAfter();
+        return validTxns.get(0).getBalanceAfter();
     }
 
     private AccountResponse mapAccountResponse(FdAccount account) {

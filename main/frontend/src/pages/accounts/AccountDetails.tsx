@@ -630,12 +630,6 @@ export function AccountDetails() {
                   <p className="text-xl font-semibold text-green-600">
                     {formatTokens(account.accruedInterest)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatConvertedTokens(
-                      account.accruedInterest,
-                      preferredCurrency
-                    )}
-                  </p>
                 </div>
               </div>
             </CardContent>

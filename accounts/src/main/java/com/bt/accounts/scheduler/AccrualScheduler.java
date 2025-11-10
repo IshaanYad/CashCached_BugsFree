@@ -176,13 +176,19 @@ public class AccrualScheduler {
     }
 
     private BigDecimal calculateCurrentBalance(String accountNo) {
+        LocalDateTime now = LocalDateTime.ofInstant(timeProvider.now(), ZoneId.systemDefault());
         List<AccountTransaction> txns = txnRepository.findByAccountNoOrderByTransactionDateDesc(accountNo);
-        if (txns.isEmpty()) {
+        
+        List<AccountTransaction> validTxns = txns.stream()
+                .filter(t -> t.getTransactionDate() != null && !t.getTransactionDate().isAfter(now))
+                .collect(Collectors.toList());
+        
+        if (validTxns.isEmpty()) {
             FdAccount account = accountRepository.findByAccountNo(accountNo)
                     .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountNo));
             return account.getPrincipalAmount();
         }
-        return txns.get(0).getBalanceAfter();
+        return validTxns.get(0).getBalanceAfter();
     }
 
     private TransactionResponse creditInterest(FdAccount account, BigDecimal amount, LocalDateTime when) {

@@ -27,6 +27,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -215,15 +216,21 @@ public class RedemptionService {
     }
 
     private BigDecimal resolveLedgerBalance(String accountNo) {
+        LocalDateTime now = TimeProvider.currentDateTime();
         List<AccountTransaction> transactions = transactionRepository
                 .findByAccountNoOrderByTransactionDateDesc(accountNo);
-        if (transactions == null || transactions.isEmpty()) {
+        
+        List<AccountTransaction> validTxns = transactions.stream()
+                .filter(t -> t.getTransactionDate() != null && !t.getTransactionDate().isAfter(now))
+                .collect(Collectors.toList());
+        
+        if (validTxns.isEmpty()) {
             FdAccount account = accountRepository.findByAccountNo(accountNo)
                     .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountNo));
             BigDecimal principal = account.getPrincipalAmount();
             return principal != null ? principal : BigDecimal.ZERO;
         }
-        return transactions.get(0).getBalanceAfter();
+        return validTxns.get(0).getBalanceAfter();
     }
 
     private BigDecimal calculateAccruedInterest(FdAccount account, LocalDateTime currentDate) {
