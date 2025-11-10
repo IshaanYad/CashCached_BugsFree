@@ -124,7 +124,7 @@ export function CashCachedDashboard() {
       return []
     }
     try {
-      const historyResp = await api.get(`/api/financials/stablecoin/history/${id}`)
+      const historyResp = await api.get(`/api/financials/wallet/history/${id}`)
       const payload = unwrapApiData<LedgerEntry[]>(historyResp?.data) ?? []
       const entries = Array.isArray(payload) ? payload : []
       setHistory(entries)
@@ -142,7 +142,7 @@ export function CashCachedDashboard() {
     }
     setIsLoadingAll(true)
     try {
-      const response = await api.get('/api/financials/stablecoin/history/all', {
+      const response = await api.get('/api/financials/wallet/history/all', {
         params: { page, size },
       })
       const payload = unwrapApiData<any>(response?.data) ?? {}
@@ -167,7 +167,7 @@ export function CashCachedDashboard() {
       return
     }
     try {
-      const summaryResp = await api.get('/api/financials/stablecoin/summary')
+      const summaryResp = await api.get('/api/financials/wallet/summary')
       const payload = unwrapApiData<Summary>(summaryResp?.data)
       setSummary(payload ?? null)
     } catch {
@@ -182,7 +182,7 @@ export function CashCachedDashboard() {
     }
     setIsWalletRefreshing(true)
     try {
-      const response = await api.get(`/api/financials/stablecoin/balance/${id}`)
+      const response = await api.get(`/api/financials/wallet/balance/${id}`)
       const payload = response?.data?.data ?? response?.data
       const balance = Number(payload?.balance ?? 0)
       setSelectedWalletTokens(Number.isFinite(balance) ? balance : 0)
@@ -334,7 +334,7 @@ export function CashCachedDashboard() {
     setIsSubmitting(true)
     try {
       const payloadAmount = toPayloadAmount(issueAmount)
-      await api.post('/api/financials/stablecoin/issue', {
+      await api.post('/api/financials/wallet/issue', {
         customerId: issueCustomer.trim(),
         amount: payloadAmount,
         reference: issueReference.trim() || undefined,
@@ -361,7 +361,7 @@ export function CashCachedDashboard() {
     setIsSubmitting(true)
     try {
       const payloadAmount = toPayloadAmount(redeemAmount)
-      await api.post('/api/financials/stablecoin/redeem', {
+      await api.post('/api/financials/wallet/redeem', {
         customerId: redeemCustomer.trim(),
         amount: payloadAmount,
         reference: redeemReference.trim() || undefined,
@@ -388,7 +388,7 @@ export function CashCachedDashboard() {
     setIsSubmitting(true)
     try {
       const payloadAmount = toPayloadAmount(transferAmount)
-      await api.post('/api/financials/stablecoin/transfer', {
+      await api.post('/api/financials/wallet/transfer', {
         fromCustomerId: transferFrom.trim(),
         toCustomerId: transferTo.trim(),
         amount: payloadAmount,

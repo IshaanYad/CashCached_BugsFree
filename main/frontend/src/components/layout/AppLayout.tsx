@@ -174,7 +174,7 @@ function AppSidebar() {
     setIsWalletLoading(true);
     try {
       const response = await api.get(
-        `/api/financials/stablecoin/balance/${user.id}`
+        `/api/financials/wallet/balance/${user.id}`
       );
       const payload = response?.data?.data ?? response?.data;
       const targetValue = Number(payload?.targetValue ?? payload?.balance ?? 0);

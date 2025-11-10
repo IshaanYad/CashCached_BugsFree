@@ -1,13 +1,11 @@
 package com.bt.accounts.service;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import com.bt.accounts.blockchain.CashCachedContract;
 import com.bt.accounts.config.CashCachedProperties;
 import com.bt.accounts.dto.CashCachedBalanceResponse;
 import com.bt.accounts.dto.CashCachedIssueRequest;
@@ -52,34 +49,31 @@ public class CashCachedService {
             Map.entry("MXN", new BigDecimal("18.40")),
             Map.entry("ZAR", new BigDecimal("18.20")));
 
-    private final CashCachedContract contract;
     private final CashCachedProperties properties;
     private final CashCachedLedgerRepository ledgerRepository;
     private final CashCachedWalletRepository walletRepository;
     private final CustomerProfileClient customerProfileClient;
 
-    private final AtomicReference<Integer> decimalsCache = new AtomicReference<>();
-
     @Transactional
     public CashCachedLedgerEntry issue(CashCachedIssueRequest request) {
-        BigDecimal tokens = requireWholeTokens(request.getAmount());
+        BigDecimal amount = requireWholeAmount(request.getAmount());
         CashCachedWallet wallet = ensureWallet(request.getCustomerId());
-        TransactionReceiptHolder receipt = mintToTreasury(tokens);
-        wallet.setBalance(wallet.getBalance().add(tokens));
+        String transactionId = generateTransactionId();
+        wallet.setBalance(wallet.getBalance().add(amount));
         walletRepository.save(wallet);
         return ledgerRepository.save(CashCachedLedgerEntry.builder()
                 .customerId(request.getCustomerId())
-                .changeAmount(tokens)
+                .changeAmount(amount)
                 .balanceAfter(wallet.getBalance())
                 .operation(Operation.ISSUE)
-                .transactionHash(receipt.transactionHash())
+                .transactionHash(transactionId)
                 .reference(request.getReference())
                 .build());
     }
 
     @Transactional
     public CashCachedLedgerEntry recordContractLock(String customerId, BigDecimal amount, String reference) {
-        BigDecimal debitAmount = requireWholeTokens(amount);
+        BigDecimal debitAmount = requireWholeAmount(amount);
         CashCachedWallet wallet = ensureWallet(customerId);
         
         if (wallet.getBalance().compareTo(debitAmount) < 0) {
@@ -99,14 +93,14 @@ public class CashCachedService {
     }
 
     @Transactional
-    public void mintForInterest(BigDecimal amount, String reference) {
-        BigDecimal tokens = requireWholeTokens(amount);
-        recordTreasuryIssuance(tokens, reference);
+    public void addInterestToTreasury(BigDecimal amount, String reference) {
+        BigDecimal roundedAmount = requireWholeAmount(amount);
+        recordTreasuryIssuance(roundedAmount, reference);
     }
 
     @Transactional
     public TransferResult transfer(CashCachedTransferRequest request) {
-        BigDecimal amount = requireWholeTokens(request.getAmount());
+        BigDecimal amount = requireWholeAmount(request.getAmount());
         if (request.getFromCustomerId().equals(request.getToCustomerId())) {
             throw new IllegalArgumentException("Transfers require distinct customers");
         }
@@ -140,12 +134,12 @@ public class CashCachedService {
 
     @Transactional
     public CashCachedLedgerEntry redeem(CashCachedRedeemRequest request) {
-        BigDecimal amount = requireWholeTokens(request.getAmount());
+        BigDecimal amount = requireWholeAmount(request.getAmount());
         CashCachedWallet wallet = ensureWallet(request.getCustomerId());
         if (wallet.getBalance().compareTo(amount) < 0) {
             throw new IllegalArgumentException("Insufficient balance for redemption");
         }
-        TransactionReceiptHolder receipt = burnFromTreasury(amount);
+        String transactionId = generateTransactionId();
         wallet.setBalance(wallet.getBalance().subtract(amount));
         walletRepository.save(wallet);
         return ledgerRepository.save(CashCachedLedgerEntry.builder()
@@ -153,7 +147,7 @@ public class CashCachedService {
                 .changeAmount(amount.negate())
                 .balanceAfter(wallet.getBalance())
                 .operation(Operation.REDEEM)
-                .transactionHash(receipt.transactionHash())
+                .transactionHash(transactionId)
                 .reference(request.getReference())
                 .build());
     }
@@ -173,16 +167,16 @@ public class CashCachedService {
         CashCachedWallet wallet = walletRepository.findByCustomerId(customerId)
                 .orElse(null);
         
-        BigDecimal tokens = wallet != null ? wallet.getBalance() : ZERO;
+        BigDecimal balance = wallet != null ? wallet.getBalance() : ZERO;
         String userBaseCurrency = wallet != null && wallet.getBaseCurrency() != null 
                 ? wallet.getBaseCurrency() 
                 : "INR";
 
         CashCachedBalanceResponse response = new CashCachedBalanceResponse();
         response.setCustomerId(customerId);
-        response.setBalance(tokens);
+        response.setBalance(balance);
         response.setBaseCurrency(userBaseCurrency);
-        response.setBaseValue(tokens);
+        response.setBaseValue(balance);
 
         Map<String, BigDecimal> rates = resolveRates();
         response.setRates(rates);
@@ -196,9 +190,9 @@ public class CashCachedService {
         BigDecimal displayRate = rates.getOrDefault(normalizedDisplay, BigDecimal.ONE);
         
         log.info("Currency conversion for customer {}: {} {} -> {} (base rate: {}, display rate: {})", 
-                customerId, tokens, userBaseCurrency, displayCurrency, baseRate, displayRate);
+                customerId, balance, userBaseCurrency, displayCurrency, baseRate, displayRate);
         
-        BigDecimal usdValue = tokens.divide(baseRate, 4, RoundingMode.HALF_UP);
+        BigDecimal usdValue = balance.divide(baseRate, 4, RoundingMode.HALF_UP);
         BigDecimal targetValue = usdValue.multiply(displayRate);
         
         log.info("Converted: {} USD -> {} {}", usdValue, targetValue, displayCurrency);
@@ -209,13 +203,10 @@ public class CashCachedService {
     }
 
     @Transactional(readOnly = true)
-    public BigDecimal totalSupplyOnChain() {
-        try {
-            BigInteger raw = contract.totalSupply().send();
-            return fromTokenUnits(raw);
-        } catch (Exception e) {
-            throw new IllegalStateException("Unable to read CashCached supply", e);
-        }
+    public BigDecimal totalSupply() {
+        return walletRepository.findAll().stream()
+                .map(CashCachedWallet::getBalance)
+                .reduce(ZERO, BigDecimal::add);
     }
 
     @Transactional(readOnly = true)
@@ -237,8 +228,8 @@ public class CashCachedService {
         
         BigDecimal amountInBaseCurrency = convertCurrency(amount, currency, userBaseCurrency);
         BigDecimal roundedAmount = amountInBaseCurrency.setScale(0, RoundingMode.HALF_UP);
-        BigDecimal tokens = requireWholeTokens(roundedAmount);
-        wallet.setBalance(wallet.getBalance().add(tokens));
+        BigDecimal finalAmount = requireWholeAmount(roundedAmount);
+        wallet.setBalance(wallet.getBalance().add(finalAmount));
         walletRepository.save(wallet);
         
         String ref = reference;
@@ -248,7 +239,7 @@ public class CashCachedService {
         
         return ledgerRepository.save(CashCachedLedgerEntry.builder()
                 .customerId(customerId)
-                .changeAmount(tokens)
+                .changeAmount(finalAmount)
                 .balanceAfter(wallet.getBalance())
                 .operation(Operation.TRANSFER_IN)
                 .reference(ref)
@@ -267,11 +258,11 @@ public class CashCachedService {
         
         BigDecimal amountInBaseCurrency = convertCurrency(amount, currency, userBaseCurrency);
         BigDecimal roundedAmount = amountInBaseCurrency.setScale(0, RoundingMode.HALF_UP);
-        BigDecimal tokens = requireWholeTokens(roundedAmount);
-        if (wallet.getBalance().compareTo(tokens) < 0) {
-            throw new InvalidAccountDataException("Insufficient CashCached balance");
+        BigDecimal finalAmount = requireWholeAmount(roundedAmount);
+        if (wallet.getBalance().compareTo(finalAmount) < 0) {
+            throw new InvalidAccountDataException("Insufficient wallet balance");
         }
-        wallet.setBalance(wallet.getBalance().subtract(tokens));
+        wallet.setBalance(wallet.getBalance().subtract(finalAmount));
         walletRepository.save(wallet);
         
         String ref = reference;
@@ -281,7 +272,7 @@ public class CashCachedService {
         
         return ledgerRepository.save(CashCachedLedgerEntry.builder()
                 .customerId(customerId)
-                .changeAmount(tokens.negate())
+                .changeAmount(finalAmount.negate())
                 .balanceAfter(wallet.getBalance())
                 .operation(Operation.TRANSFER_OUT)
                 .reference(ref)
@@ -291,13 +282,13 @@ public class CashCachedService {
     @Transactional(readOnly = true)
     public CashCachedSummaryResponse summary() {
         BigDecimal ledgerTotal = ledgerTotal();
-        BigDecimal onChain = totalSupplyOnChain();
+        BigDecimal totalSupply = totalSupply();
         CashCachedSummaryResponse response = new CashCachedSummaryResponse();
         response.setContractAddress(properties.getContractAddress());
         response.setTreasuryAddress(properties.getTreasuryAddress());
         response.setLedgerTotal(ledgerTotal);
-        response.setOnChainSupply(onChain);
-        response.setVariance(ledgerTotal.subtract(onChain));
+        response.setOnChainSupply(totalSupply);
+        response.setVariance(ledgerTotal.subtract(totalSupply));
         return response;
     }
 
@@ -315,75 +306,39 @@ public class CashCachedService {
                 });
     }
 
-    private TransactionReceiptHolder mintToTreasury(BigDecimal amount) {
-        return new TransactionReceiptHolder("0x" + java.util.UUID.randomUUID().toString().replace("-", ""));
+    private String generateTransactionId() {
+        return "TXN-" + java.util.UUID.randomUUID().toString();
     }
 
-    private void recordTreasuryIssuance(BigDecimal tokens, String reference) {
-        TransactionReceiptHolder receipt = mintToTreasury(tokens);
+    private void recordTreasuryIssuance(BigDecimal amount, String reference) {
+        String transactionId = generateTransactionId();
         String treasuryId = properties.getTreasuryAddress();
         CashCachedWallet treasuryWallet = ensureWallet(treasuryId);
-        treasuryWallet.setBalance(treasuryWallet.getBalance().add(tokens));
+        treasuryWallet.setBalance(treasuryWallet.getBalance().add(amount));
         walletRepository.save(treasuryWallet);
         ledgerRepository.save(CashCachedLedgerEntry.builder()
                 .customerId(treasuryId)
-                .changeAmount(tokens)
+                .changeAmount(amount)
                 .balanceAfter(treasuryWallet.getBalance())
                 .operation(Operation.ISSUE)
-                .transactionHash(receipt.transactionHash())
+                .transactionHash(transactionId)
                 .reference(reference)
                 .build());
     }
 
-    private TransactionReceiptHolder burnFromTreasury(BigDecimal amount) {
-        return new TransactionReceiptHolder("0x" + java.util.UUID.randomUUID().toString().replace("-", ""));
-    }
-
-    private int tokenDecimals() {
-        Integer cached = decimalsCache.get();
-        if (cached != null) {
-            return cached;
-        }
-        synchronized (decimalsCache) {
-            Integer doubleChecked = decimalsCache.get();
-            if (doubleChecked != null) {
-                return doubleChecked;
-            }
-            try {
-                int resolved = contract.decimals().send().intValue();
-                decimalsCache.set(resolved);
-                return resolved;
-            } catch (Exception e) {
-                throw new IllegalStateException("Unable to read CashCached decimals", e);
-            }
-        }
-    }
-
-    private BigInteger toTokenUnits(BigDecimal amount) {
-        int decimals = tokenDecimals();
-        BigDecimal scaled = amount.setScale(decimals, RoundingMode.DOWN);
-        return scaled.movePointRight(decimals).toBigIntegerExact();
-    }
-
-    private BigDecimal fromTokenUnits(BigInteger amount) {
-        int decimals = tokenDecimals();
-        BigDecimal raw = new BigDecimal(amount);
-        return raw.movePointLeft(decimals);
-    }
-
-    private BigDecimal requireWholeTokens(BigDecimal amount) {
+    private BigDecimal requireWholeAmount(BigDecimal amount) {
         if (amount == null) {
-            throw new IllegalArgumentException("Token amount is required");
+            throw new IllegalArgumentException("Amount is required");
         }
         try {
             BigDecimal normalized = amount.stripTrailingZeros();
             BigDecimal scaled = normalized.setScale(0, RoundingMode.UNNECESSARY);
             if (scaled.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("Token amount must be positive");
+                throw new IllegalArgumentException("Amount must be positive");
             }
             return scaled;
         } catch (ArithmeticException ex) {
-            throw new IllegalArgumentException("CashCached tokens must be whole numbers", ex);
+            throw new IllegalArgumentException("Amount must be a whole number", ex);
         }
     }
 
@@ -394,14 +349,6 @@ public class CashCachedService {
         private final CashCachedLedgerEntry creditEntry;
     }
 
-    @RequiredArgsConstructor
-    private static class TransactionReceiptHolder {
-        private final String transactionHash;
-
-        public String transactionHash() {
-            return transactionHash;
-        }
-    }
 
     private Map<String, BigDecimal> resolveRates() {
         Map<String, BigDecimal> rates = new HashMap<>();

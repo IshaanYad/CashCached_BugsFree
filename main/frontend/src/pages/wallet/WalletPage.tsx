@@ -51,9 +51,10 @@ export function WalletPage() {
 
 
   const parseAmount = (value: string) => {
-    const normalized = value.trim();
+    if (!value) return 0;
+    const normalized = value.trim().replace(/,/g, '');
     if (!normalized) return 0;
-    const num = Number(normalized);
+    const num = parseFloat(normalized);
     if (!Number.isFinite(num) || num <= 0) return 0;
     return num;
   };
@@ -90,13 +91,13 @@ export function WalletPage() {
     setIsLoading(true);
     try {
       const response = await api.get(
-        `/api/financials/stablecoin/balance/${user.id}`
+        `/api/financials/wallet/balance/${user.id}`
       );
       const payload = response?.data?.data ?? response?.data;
       const targetValue = Number(payload?.targetValue ?? payload?.balance ?? 0);
-      const userBaseCurrency = payload?.baseCurrency || "INR";
+      const displayCurrency = payload?.targetCurrency || payload?.baseCurrency || "INR";
       setWalletBalance(Number.isFinite(targetValue) ? targetValue : 0);
-      setBaseCurrency(userBaseCurrency);
+      setBaseCurrency(displayCurrency);
     } catch (error) {
       console.error("Failed to load wallet balance", error);
       toast.error("Unable to load wallet balance");
@@ -110,7 +111,7 @@ export function WalletPage() {
     setIsLoadingTransactions(true);
     try {
       const response = await api.get(
-        `/api/financials/stablecoin/transactions/${user.id}`
+        `/api/financials/wallet/transactions/${user.id}`
       );
       const list = response?.data?.data ?? response?.data ?? [];
       const mapped = (Array.isArray(list) ? list : []).map((item: any) => {
@@ -144,14 +145,15 @@ export function WalletPage() {
 
   const handleAddMoney = async () => {
     const amount = parseAmount(addAmount);
-    if (!amount || !user?.id) {
+    console.log("Add money - input:", addAmount, "parsed:", amount);
+    if (!amount || amount <= 0 || !user?.id) {
       toast.error("Please enter a valid amount");
       return;
     }
 
     setIsProcessing(true);
     try {
-      await api.post(`/api/financials/stablecoin/add`, {
+      await api.post(`/api/financials/wallet/add`, {
         customerId: user.id,
         amount: amount,
         currency: preferredCurrency
@@ -163,7 +165,8 @@ export function WalletPage() {
       await fetchTransactions();
     } catch (error: any) {
       console.error("Add money failed:", error);
-      toast.error(error.message || "Failed to add money to wallet");
+      const errorMsg = error.response?.data?.message || error.message || "Failed to add money to wallet";
+      toast.error(errorMsg);
     } finally {
       setIsProcessing(false);
     }
@@ -183,7 +186,7 @@ export function WalletPage() {
 
     setIsProcessing(true);
     try {
-      await api.post(`/api/financials/stablecoin/withdraw`, {
+      await api.post(`/api/financials/wallet/withdraw`, {
         customerId: user.id,
         amount: amount,
         currency: preferredCurrency

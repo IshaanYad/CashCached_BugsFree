@@ -28,6 +28,7 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useI18n } from "@/context/I18nContext";
 import { useStablecoinConversion } from "@/hooks/useStablecoinConversion";
+import { formatCurrency } from "@/lib/currency";
 
 interface Account {
   id: string;
@@ -99,29 +100,26 @@ export function AccountDetails() {
     setIsWalletLoading(true);
     try {
       const response = await api.get(
-        `/api/financials/stablecoin/balance/${customerIdParam}`
+        `/api/financials/wallet/balance/${customerIdParam}`
       );
       const payload = response?.data?.data ?? response?.data;
-      const rawBalance = Number(payload?.balance ?? 0);
-      const tokens = Number.isFinite(rawBalance) ? rawBalance : 0;
-      const rawTarget = Number(payload?.targetValue ?? rawBalance);
-      const targetValue = Number.isFinite(rawTarget) ? rawTarget : tokens;
+      const targetValue = Number(payload?.targetValue ?? payload?.balance ?? 0);
+      const displayValue = Number.isFinite(targetValue) ? targetValue : 0;
       const currency = String(
         payload?.targetCurrency ??
           payload?.baseCurrency ??
           preferredCurrency ??
-          "KWD"
+          "INR"
       );
-      setWalletTokens(tokens);
+      setWalletTokens(displayValue);
       return {
         customerId: customerIdParam,
-        balance: tokens,
-        targetValue,
+        balance: displayValue,
         currency,
       };
     } catch (error) {
       console.error("Failed to load wallet balance", error);
-      toast.error("Unable to load CashCached wallet balance");
+      toast.error("Unable to load wallet balance");
       setWalletTokens(0);
       return null;
     } finally {
@@ -355,33 +353,21 @@ export function AccountDetails() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Coins className="h-5 w-5" />
-              CashCached Wallet
+              Wallet Balance
             </CardTitle>
             <CardDescription>
               Available balance for this customer
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
+          <CardContent>
             <div>
               <p className="text-sm text-muted-foreground">
-                Wallet Balance ({preferredCurrency})
+                Available Balance
               </p>
               <p className="text-2xl font-bold">
                 {isWalletLoading
                   ? "Loading…"
-                  : walletTokens.toLocaleString(undefined, {
-                      maximumFractionDigits: 0,
-                    })}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {preferredCurrency} Equivalent
-              </p>
-              <p className="text-xl font-semibold">
-                {isWalletLoading
-                  ? "—"
-                  : formatConvertedTokens(walletTokens, preferredCurrency)}
+                  : formatCurrency(walletTokens, preferredCurrency)}
               </p>
             </div>
           </CardContent>
@@ -474,7 +460,7 @@ export function AccountDetails() {
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Deposit (tokens)
+                      Deposit Amount
                     </p>
                     <div className="flex gap-2">
                       <Input
@@ -543,7 +529,7 @@ export function AccountDetails() {
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">
-                      Withdraw (tokens)
+                      Withdraw Amount
                     </p>
                     <div className="flex gap-2">
                       <Input

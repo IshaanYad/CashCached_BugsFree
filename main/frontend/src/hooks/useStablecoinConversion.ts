@@ -31,7 +31,7 @@ export function useStablecoinConversion() {
     
     setIsLoading(true)
     try {
-      const response = await api.get(`/api/financials/stablecoin/balance/${user.id}`)
+      const response = await api.get(`/api/financials/wallet/balance/${user.id}`)
       const payload = response?.data?.data ?? response?.data
       const targetValue = Number(payload?.targetValue ?? payload?.balance ?? 0)
       const validBalance = Number.isFinite(targetValue) ? targetValue : 0
@@ -77,7 +77,7 @@ export function useStablecoinConversion() {
     
     try {
       // Call API to add money
-      await api.post(`/api/financials/stablecoin/add`, {
+      await api.post(`/api/financials/wallet/add`, {
         customerId: user.id,
         amount: amount,
         currency: currency
@@ -114,7 +114,7 @@ export function useStablecoinConversion() {
     
     try {
       // Call API to withdraw money
-      await api.post(`/api/financials/stablecoin/withdraw`, {
+      await api.post(`/api/financials/wallet/withdraw`, {
         customerId: user.id,
         amount: amount,
         currency: currency

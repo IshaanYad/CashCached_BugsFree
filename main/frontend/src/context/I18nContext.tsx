@@ -1,6 +1,5 @@
 import { createContext, useContext, useMemo, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { TOKEN_SYMBOL } from "@/lib/currency";
 
 export type Lang = "en" | "ja";
 
@@ -159,12 +158,12 @@ const dict: Dict = {
   },
   "calculator.product": { en: "Product", ja: "商品" },
   "calculator.principal": {
-    en: `Principal Amount (${TOKEN_SYMBOL})`,
-    ja: `元本 (${TOKEN_SYMBOL})`,
+    en: "Principal Amount",
+    ja: "元本",
   },
   "calculator.principalTokens": {
-    en: `Principal Amount (${TOKEN_SYMBOL})`,
-    ja: `元本 (${TOKEN_SYMBOL})`,
+    en: "Principal Amount",
+    ja: "元本",
   },
   "calculator.tenureYears": { en: "Tenure (Years)", ja: "期間 (年)" },
   "calculator.compounding": { en: "Compounding", ja: "複利頻度" },
@@ -178,16 +177,16 @@ const dict: Dict = {
     ja: "獲得利息",
   },
   "calculator.result.principal": {
-    en: `Principal (${TOKEN_SYMBOL})`,
-    ja: `元本 (${TOKEN_SYMBOL})`,
+    en: "Principal",
+    ja: "元本",
   },
   "calculator.result.interest": {
-    en: `Interest Earned (${TOKEN_SYMBOL})`,
-    ja: `獲得利息 (${TOKEN_SYMBOL})`,
+    en: "Interest Earned",
+    ja: "獲得利息",
   },
   "calculator.result.maturity": {
-    en: `Maturity Amount (${TOKEN_SYMBOL})`,
-    ja: `満期金額 (${TOKEN_SYMBOL})`,
+    en: "Maturity Amount",
+    ja: "満期金額",
   },
   "calculator.calculating": { en: "Calculating...", ja: "計算中..." },
   "calculator.calculateReturns": { en: "Calculate", ja: "計算する" },
@@ -456,8 +455,8 @@ const dict: Dict = {
     ja: "計算機を使用",
   },
   "dashboard.activity.calculatorUsed.desc": {
-    en: `Calculated returns for 100,000 ${TOKEN_SYMBOL}`,
-    ja: `100,000 ${TOKEN_SYMBOL}のリターンを計算しました`,
+    en: "Calculated returns for 100,000",
+    ja: "100,000のリターンを計算しました",
   },
   "dashboard.activity.productViewed": {
     en: "Product viewed",

@@ -422,11 +422,10 @@ export function Dashboard() {
       setAccounts(mappedAccounts);
       const totalAccounts = mappedAccounts.length;
       const balanceResp = await api.get(
-        `/api/financials/stablecoin/balance/${cid}`
+        `/api/financials/wallet/balance/${cid}`
       );
       const balancePayload = balanceResp?.data?.data ?? balanceResp?.data;
-      const totalTokens = Number(balancePayload?.balance ?? 0);
-      const totalConverted = Number(balancePayload?.targetValue ?? totalTokens);
+      const totalBalance = Number(balancePayload?.targetValue ?? balancePayload?.balance ?? 0);
       const currency = String(
         balancePayload?.targetCurrency ?? balancePayload?.baseCurrency ?? "INR"
       );
@@ -474,8 +473,8 @@ export function Dashboard() {
       }
       setStats({
         totalAccounts,
-        totalTokens,
-        totalConverted,
+        totalTokens: totalBalance,
+        totalConverted: totalBalance,
         currency,
         activeProducts,
         recentTransactions,

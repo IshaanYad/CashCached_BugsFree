@@ -35,10 +35,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/financials/stablecoin")
+@RequestMapping("/api/financials/wallet")
 @RequiredArgsConstructor
 @Validated
-@Tag(name = "Stablecoin Management", description = "APIs for managing CashCached stablecoin operations")
+@Tag(name = "Wallet Management", description = "APIs for managing customer wallet operations")
 @SecurityRequirement(name = "Bearer Authentication")
 public class CashCachedController {
 
@@ -46,20 +46,20 @@ public class CashCachedController {
 
         @PostMapping("/issue")
         @PreAuthorize("hasAnyRole('ADMIN','BANKOFFICER')")
-        @Operation(summary = "Issue CashCached", description = "Issues new CashCached stablecoin to an account")
+        @Operation(summary = "Issue funds", description = "Issues new funds to a customer wallet")
         public ResponseEntity<ApiResponse<CashCachedLedgerEntryResponse>> issue(
                         @Valid @RequestBody CashCachedIssueRequest request) {
                 CashCachedLedgerEntry entry = cashCachedService.issue(request);
                 return new ResponseEntity<>(ApiResponse.<CashCachedLedgerEntryResponse>builder()
                                 .success(true)
-                                .message("CashCached issued")
+                                .message("Funds issued")
                                 .data(CashCachedLedgerEntryResponse.fromEntity(entry))
                                 .build(), HttpStatus.CREATED);
         }
 
         @PostMapping("/transfer")
         @PreAuthorize("hasAnyRole('ADMIN','BANKOFFICER')")
-        @Operation(summary = "Transfer CashCached", description = "Transfers CashCached between two accounts")
+        @Operation(summary = "Transfer funds", description = "Transfers funds between two customer wallets")
         public ResponseEntity<ApiResponse<List<CashCachedLedgerEntryResponse>>> transfer(
                         @Valid @RequestBody CashCachedTransferRequest request) {
                 CashCachedService.TransferResult result = cashCachedService.transfer(request);
@@ -75,19 +75,19 @@ public class CashCachedController {
 
         @PostMapping("/redeem")
         @PreAuthorize("hasAnyRole('ADMIN','BANKOFFICER')")
-        @Operation(summary = "Redeem CashCached", description = "Redeems CashCached stablecoin from an account")
+        @Operation(summary = "Redeem funds", description = "Redeems funds from a customer wallet")
         public ResponseEntity<ApiResponse<CashCachedLedgerEntryResponse>> redeem(
                         @Valid @RequestBody CashCachedRedeemRequest request) {
                 CashCachedLedgerEntry entry = cashCachedService.redeem(request);
                 return ResponseEntity.ok(ApiResponse.<CashCachedLedgerEntryResponse>builder()
                                 .success(true)
-                                .message("CashCached redeemed")
+                                .message("Funds redeemed")
                                 .data(CashCachedLedgerEntryResponse.fromEntity(entry))
                                 .build());
         }
 
         @GetMapping("/balance/{customerId}")
-        @Operation(summary = "Get account balance", description = "Retrieves the CashCached balance for a specific customer")
+        @Operation(summary = "Get wallet balance", description = "Retrieves the wallet balance for a specific customer")
         public ResponseEntity<ApiResponse<CashCachedBalanceResponse>> balance(@PathVariable String customerId,
                         @RequestHeader(value = "Authorization", required = false) String authHeader) {
                 CashCachedBalanceResponse response = cashCachedService.balance(customerId, authHeader);
@@ -100,7 +100,7 @@ public class CashCachedController {
 
         @PostMapping("/wallet/{customerId}/admin/credit")
         @PreAuthorize("hasAnyRole('ADMIN','BANKOFFICER')")
-        @Operation(summary = "Credit customer wallet", description = "Credits CashCached to a customer's wallet with admin privileges")
+        @Operation(summary = "Credit customer wallet", description = "Credits funds to a customer's wallet with admin privileges")
         public ResponseEntity<ApiResponse<CashCachedLedgerEntryResponse>> creditWallet(@PathVariable String customerId,
                         @Valid @RequestBody CashCachedIssueRequest request) {
                 CashCachedLedgerEntry entry = cashCachedService.creditWallet(customerId, request.getAmount(),
@@ -114,7 +114,7 @@ public class CashCachedController {
 
         @PostMapping("/wallet/{customerId}/admin/debit")
         @PreAuthorize("hasAnyRole('ADMIN','BANKOFFICER')")
-        @Operation(summary = "Debit customer wallet", description = "Debits CashCached from a customer's wallet with admin privileges")
+        @Operation(summary = "Debit customer wallet", description = "Debits funds from a customer's wallet with admin privileges")
         public ResponseEntity<ApiResponse<CashCachedLedgerEntryResponse>> debitWallet(@PathVariable String customerId,
                         @Valid @RequestBody CashCachedRedeemRequest request) {
                 CashCachedLedgerEntry entry = cashCachedService.debitWallet(customerId, request.getAmount(),
@@ -127,7 +127,7 @@ public class CashCachedController {
         }
 
         @GetMapping("/history/{customerId}")
-        @Operation(summary = "Get customer transaction history", description = "Retrieves CashCached transaction history for a specific customer")
+        @Operation(summary = "Get customer transaction history", description = "Retrieves wallet transaction history for a specific customer")
         public ResponseEntity<ApiResponse<List<CashCachedLedgerEntryResponse>>> history(
                         @PathVariable String customerId) {
                 List<CashCachedLedgerEntry> history = cashCachedService.history(customerId);
@@ -143,7 +143,7 @@ public class CashCachedController {
 
         @GetMapping("/history/all")
         @PreAuthorize("hasAnyRole('ADMIN','BANKOFFICER')")
-        @Operation(summary = "Get all transaction history", description = "Retrieves paginated CashCached transaction history for all customers")
+        @Operation(summary = "Get all transaction history", description = "Retrieves paginated wallet transaction history for all customers")
         public ResponseEntity<ApiResponse<Page<CashCachedLedgerEntryResponse>>> historyAll(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "25") int size) {
@@ -162,7 +162,7 @@ public class CashCachedController {
         }
 
         @PostMapping("/wallet/transfer")
-        @Operation(summary = "Transfer between wallets", description = "Transfers CashCached between customer wallets")
+        @Operation(summary = "Transfer between wallets", description = "Transfers funds between customer wallets")
         public ResponseEntity<ApiResponse<List<CashCachedLedgerEntryResponse>>> walletTransfer(
                         @Valid @RequestBody CashCachedTransferRequest request) {
                 CashCachedService.TransferResult result = cashCachedService.transfer(request);
@@ -178,7 +178,7 @@ public class CashCachedController {
 
         @GetMapping("/summary")
         @PreAuthorize("hasAnyRole('ADMIN','BANKOFFICER')")
-        @Operation(summary = "Get stablecoin summary", description = "Retrieves a comprehensive summary of CashCached stablecoin operations")
+        @Operation(summary = "Get wallet summary", description = "Retrieves a comprehensive summary of wallet operations")
         public ResponseEntity<ApiResponse<CashCachedSummaryResponse>> summary() {
                 CashCachedSummaryResponse response = cashCachedService.summary();
                 return ResponseEntity.ok(ApiResponse.<CashCachedSummaryResponse>builder()

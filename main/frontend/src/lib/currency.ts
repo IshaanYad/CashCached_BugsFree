@@ -1,5 +1,4 @@
 export const BASE_CURRENCY = 'KWD'
-export const TOKEN_SYMBOL = 'CASH'
 
 const getCurrencyDecimals = (currency: string): number => {
   const decimals: { [key: string]: number } = {

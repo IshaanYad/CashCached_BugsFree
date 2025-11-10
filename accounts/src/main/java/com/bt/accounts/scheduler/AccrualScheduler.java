@@ -122,7 +122,7 @@ public class AccrualScheduler {
             BigDecimal interest = interestRaw.setScale(0, RoundingMode.CEILING);
 
             if (interest.compareTo(BigDecimal.ONE) >= 0) {
-                mintInterestTokens(account, interest, nextAccrual);
+                addInterestTokensToTreasury(account, interest, nextAccrual);
                 TransactionResponse txn = creditInterest(account, interest, nextAccrual);
                 currentBalance = txn.getBalanceAfter();
                 totalAccrued = totalAccrued.add(interest);
@@ -194,14 +194,13 @@ public class AccrualScheduler {
                 .build(), when);
     }
 
-    private void mintInterestTokens(FdAccount account, BigDecimal amount, LocalDateTime when) {
+    private void addInterestTokensToTreasury(FdAccount account, BigDecimal amount, LocalDateTime when) {
         String reference = "Interest accrual " + account.getAccountNo() + " @ " + when.toLocalDate();
         try {
-            cashCachedService.mintForInterest(amount, reference);
-            log.info("Minted {} CCHD interest backing for account {}", amount, account.getAccountNo());
+            cashCachedService.addInterestToTreasury(amount, reference);
+            log.info("Added {} to treasury for interest backing for account {}", amount, account.getAccountNo());
         } catch (Exception ex) {
-            log.error("Minting interest failed for account {}: {}", account.getAccountNo(), ex.getMessage(), ex);
-            throw ex;
+            log.error("Adding interest to treasury failed for account {}: {}", account.getAccountNo(), ex.getMessage(), ex);
         }
     }
 

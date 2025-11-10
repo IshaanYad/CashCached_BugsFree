@@ -143,7 +143,7 @@ public class RedemptionService {
         String transactionId = UUID.randomUUID().toString();
         String beneficiaryCustomerId = account.getCustomerId();
 
-        String blockchainTxHash;
+        String transactionHash;
         String walletAddress;
         BigDecimal newWalletBalance;
 
@@ -154,15 +154,15 @@ public class RedemptionService {
             issueRequest.setReference("FD Redemption - " + accountNo + " - " + redemptionType);
 
             CashCachedLedgerEntry ledgerEntry = cashCachedService.issue(issueRequest);
-            blockchainTxHash = ledgerEntry.getTransactionHash();
+            transactionHash = ledgerEntry.getTransactionHash();
             walletAddress = issueRequest.getCustomerId();
             newWalletBalance = ledgerEntry.getBalanceAfter();
 
-            log.info("Blockchain redemption successful. TxHash: {}, Amount: {}", blockchainTxHash, netPayoutAmount);
+            log.info("Redemption successful. TxHash: {}, Amount: {}", transactionHash, netPayoutAmount);
 
         } catch (Exception e) {
-            log.error("Blockchain redemption failed for account: {}", accountNo, e);
-            throw new ServiceIntegrationException("Failed to process blockchain redemption: " + e.getMessage());
+            log.error("Redemption failed for account: {}", accountNo, e);
+            throw new ServiceIntegrationException("Failed to process redemption: " + e.getMessage());
         }
 
         AccountTransaction.TransactionType transactionType = isMatured
@@ -177,7 +177,7 @@ public class RedemptionService {
                 accruedInterest,
                 penaltyAmount,
                 netPayoutAmount,
-                blockchainTxHash,
+                transactionHash,
                 null);
 
         account.setStatus(FdAccount.AccountStatus.CLOSED);
@@ -190,11 +190,11 @@ public class RedemptionService {
         account.setTotalInterestAccrued(BigDecimal.ZERO);
         accountRepository.save(account);
 
-        publishRedemptionEvent(account, redemptionType, transactionId, blockchainTxHash,
+        publishRedemptionEvent(account, redemptionType, transactionId, transactionHash,
                 accruedInterest, penaltyAmount, netPayoutAmount, daysUntilMaturity, null);
 
         log.info("Account {} redeemed successfully. Type: {}, NetPayout: {}, TxHash: {}",
-                accountNo, redemptionType, netPayoutAmount, blockchainTxHash);
+                accountNo, redemptionType, netPayoutAmount, transactionHash);
 
         return RedemptionResponse.builder()
                 .accountNo(accountNo)
@@ -206,7 +206,7 @@ public class RedemptionService {
                 .interestAmount(accruedInterest)
                 .penaltyAmount(penaltyAmount)
                 .netPayoutAmount(netPayoutAmount)
-                .blockchainTransactionHash(blockchainTxHash)
+                .blockchainTransactionHash(transactionHash)
                 .walletAddress(walletAddress)
                 .newWalletBalance(newWalletBalance)
                 .status("SUCCESS")
